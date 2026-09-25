@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:lisstor.Models"
+             xmlns:viewModels="clr-namespace:lisstor.ViewModels"
+             x:Class="lisstor.MainPage"
+             x:DataType="viewModels:MainViewModel"
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
+
+    <Grid RowDefinitions="Auto,*">
+        <Grid Grid.Row="0" Padding="20,12,12,10" ColumnDefinitions="Auto,*,48" ColumnSpacing="12">
+            <Border WidthRequest="40" HeightRequest="40" BackgroundColor="{StaticResource Primary}"
+                    StrokeThickness="0" StrokeShape="RoundRectangle 12">
+                <Label Text="L" FontSize="20" FontAttributes="Bold" TextColor="White"
+                       HorizontalOptions="Center" VerticalOptions="Center" />
+            </Border>
+            <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
+                <Label Text="lisstor" Style="{StaticResource AppBarTitle}" />
+                <Label Text="{Binding FilterSummary}" Style="{StaticResource SupportingText}" />
+            </VerticalStackLayout>
+            <Border Grid.Column="2" WidthRequest="48" HeightRequest="48"
+                    BackgroundColor="Transparent" StrokeThickness="0" StrokeShape="RoundRectangle 24">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnFilterTapped" />
+                </Border.GestureRecognizers>
+                <Path Data="M3,5 L21,5 M6,12 L18,12 M10,19 L14,19"
+                      Stroke="{AppThemeBinding Light={StaticResource OnSurface}, Dark={StaticResource OnSurfaceDark}}"
+                      StrokeThickness="2" StrokeLineCap="Round" WidthRequest="24" HeightRequest="24"
+                      HorizontalOptions="Center" VerticalOptions="Center" />
+            </Border>
+        </Grid>
+
+        <Grid Grid.Row="1">
+            <RefreshView Command="{Binding RefreshCommand}" IsRefreshing="{Binding IsBusy, Mode=OneWay}">
+                <CollectionView ItemsSource="{Binding Stories}" SelectionMode="None" Margin="16,8,16,24">
+                    <CollectionView.ItemsLayout>
+                        <LinearItemsLayout Orientation="Vertical" ItemSpacing="8" />
+                    </CollectionView.ItemsLayout>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="models:StoryCard">
+                            <Border Style="{StaticResource StoryCard}">
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.OpenStoryCommand}"
+                                                          CommandParameter="{Binding .}" />
+                                </Border.GestureRecognizers>
+                                <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="6">
+                                    <Label Text="{Binding Title}" Style="{StaticResource StoryTitle}"
+                                           LineBreakMode="TailTruncation" MaxLines="1" />
+                                    <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,*" ColumnSpacing="6">
+                                        <Label Text="{Binding Author}" Style="{StaticResource PrimaryLabel}" />
+                                        <Label Grid.Column="1" Text="•" Style="{StaticResource SupportingText}" FontSize="12" />
+                                        <Label Grid.Column="2" Text="{Binding Metadata}" Style="{StaticResource SupportingText}"
+                                               FontSize="12" LineBreakMode="TailTruncation" MaxLines="1" />
+                                    </Grid>
+                                    <Label Grid.Row="2" Text="{Binding Description}" Style="{StaticResource SupportingText}"
+                                           FontSize="13" LineHeight="1.2" LineBreakMode="TailTruncation" MaxLines="2" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </RefreshView>
+
+            <VerticalStackLayout IsVisible="{Binding IsEmpty}" Padding="36" Spacing="8"
+                                 HorizontalOptions="Center" VerticalOptions="Center">
+                <Label Text="No stories found" Style="{StaticResource SectionTitle}" HorizontalTextAlignment="Center" />
+                <Label Text="Try changing your filters." Style="{StaticResource SupportingText}" HorizontalTextAlignment="Center" />
+            </VerticalStackLayout>
+
+            <Border IsVisible="{Binding HasError}" Margin="24" Padding="24"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceContainer}, Dark={StaticResource SurfaceContainerDark}}"
+                    StrokeThickness="0" StrokeShape="RoundRectangle 20" VerticalOptions="Center">
+                <VerticalStackLayout Spacing="14">
+                    <Label Text="Couldn’t load stories" Style="{StaticResource SectionTitle}" />
+                    <Label Text="{Binding ErrorMessage}" Style="{StaticResource SupportingText}" MaxLines="4" />
+                    <Button Text="Try again" Command="{Binding RetryCommand}" HorizontalOptions="Start" />
+                </VerticalStackLayout>
+            </Border>
+
+            <ActivityIndicator IsVisible="{Binding IsBusy}" IsRunning="{Binding IsBusy}"
+                               WidthRequest="40" HeightRequest="40"
+                               HorizontalOptions="Center" VerticalOptions="Center" />
+        </Grid>
+    </Grid>
+</ContentPage>

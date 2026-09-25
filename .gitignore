@@ -1,0 +1,36 @@
+# Build outputs
+bin/
+obj/
+
+# Visual Studio user state
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# JetBrains IDEs
+.idea/
+*.sln.iml
+
+# .NET tooling
+.dotnet/
+artifacts/
+TestResults/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Local signing and secrets
+*.keystore
+*.jks
+*.pfx
+*.snk
+secrets.json
+appsettings.*.local.json
+
+# Generated Android packages
+*.apk
+*.aab
+
