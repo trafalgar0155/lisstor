@@ -221,12 +221,18 @@ public sealed class MainViewModel : INotifyPropertyChanged
 				return;
 
 			TagOptions.Clear();
+			ObservableCollection<SelectableFilterOption> availableTags = new ObservableCollection<SelectableFilterOption>();
 			foreach (var tag in tags)
 			{
 				tag.IsSelected = selectedIds.Contains(tag.Value);
-				TagOptions.Add(tag);
+				availableTags.Add(tag);
+				
 			}
-		}
+            foreach (var item in availableTags.OrderBy(x => x.Label))
+            {
+				TagOptions.Add(item);
+            }
+        }
 		catch (Exception ex)
 		{
 			System.Diagnostics.Debug.WriteLine($"Tag loading failed: {ex}");
