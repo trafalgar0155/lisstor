@@ -23,6 +23,7 @@ TestResults/
 Thumbs.db
 
 # Local signing and secrets
+.signing/
 *.keystore
 *.jks
 *.pfx
@@ -33,4 +34,3 @@ appsettings.*.local.json
 # Generated Android packages
 *.apk
 *.aab
-
