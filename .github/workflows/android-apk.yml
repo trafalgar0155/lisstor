@@ -1,0 +1,106 @@
+name: Build signed Android APK
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: true
+
+jobs:
+  build:
+    name: Signed APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install .NET MAUI Android workload
+        run: dotnet workload install maui-android
+
+      - name: Restore packages
+        run: dotnet restore lisstor.csproj
+
+      - name: Restore signing keystore
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          for value in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            if [ -z "${!value}" ]; then
+              echo "::error::Required repository secret $value is not configured."
+              exit 1
+            fi
+          done
+
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/lisstor.keystore"
+
+      - name: Build signed Release APK
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: >-
+          dotnet publish lisstor.csproj
+          -f net10.0-android
+          -c Release
+          -p:AndroidPackageFormats=apk
+          -p:AndroidKeyStore=true
+          -p:AndroidSigningKeyStore="$RUNNER_TEMP/lisstor.keystore"
+          -p:AndroidSigningKeyAlias="$ANDROID_KEY_ALIAS"
+          -p:AndroidSigningKeyPass=env:ANDROID_KEY_PASSWORD
+          -p:AndroidSigningStorePass=env:ANDROID_KEYSTORE_PASSWORD
+
+      - name: Collect and verify signed APK
+        shell: bash
+        run: |
+          signed_apk="$(find bin/Release/net10.0-android/publish -type f -name '*-Signed.apk' -print -quit)"
+          if [ -z "$signed_apk" ]; then
+            echo "::error::The signed APK was not found in the publish output."
+            find bin/Release/net10.0-android/publish -maxdepth 1 -type f -print || true
+            exit 1
+          fi
+
+          apksigner="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner -print | sort -V | tail -n 1)"
+          if [ -z "$apksigner" ]; then
+            echo "::error::Android apksigner was not found."
+            exit 1
+          fi
+
+          "$apksigner" verify --verbose --print-certs "$signed_apk"
+          mkdir -p artifacts
+          cp "$signed_apk" "artifacts/lisstor-${GITHUB_SHA::7}.apk"
+
+      - name: Upload signed APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: lisstor-apk-${{ github.sha }}
+          path: artifacts/*.apk
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
+
